@@ -1,0 +1,477 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		657C4125191B325100EB2613 /* VideoEdite.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 657C4124191B325100EB2613 /* VideoEdite.h */; };
+		657C4134191B325200EB2613 /* libVideoEdite.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 657C411C191B325100EB2613 /* libVideoEdite.a */; };
+		657C413A191B325200EB2613 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 657C4138191B325200EB2613 /* InfoPlist.strings */; };
+		657C413C191B325200EB2613 /* VideoEditeTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 657C413B191B325200EB2613 /* VideoEditeTests.m */; };
+		657C4196191B62BA00EB2613 /* CAVReader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 657C4194191B62BA00EB2613 /* CAVReader.cpp */; };
+		657C4209191B6B5000EB2613 /* ffmpegUtil.c in Sources */ = {isa = PBXBuildFile; fileRef = 657C4208191B6B5000EB2613 /* ffmpegUtil.c */; };
+		65FDBF22194BE84600503752 /* BaseNode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65FDBF20194BE84600503752 /* BaseNode.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		657C4132191B325200EB2613 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 657C4114191B325100EB2613 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 657C411B191B325100EB2613;
+			remoteInfo = VideoEdite;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		657C411A191B325100EB2613 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+				657C4125191B325100EB2613 /* VideoEdite.h in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		657C411C191B325100EB2613 /* libVideoEdite.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libVideoEdite.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		657C4123191B325100EB2613 /* VideoEdite-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "VideoEdite-Prefix.pch"; sourceTree = "<group>"; };
+		657C4124191B325100EB2613 /* VideoEdite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VideoEdite.h; sourceTree = "<group>"; };
+		657C412C191B325200EB2613 /* VideoEditeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VideoEditeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		657C4137191B325200EB2613 /* VideoEditeTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "VideoEditeTests-Info.plist"; sourceTree = "<group>"; };
+		657C4139191B325200EB2613 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		657C413B191B325200EB2613 /* VideoEditeTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = VideoEditeTests.m; sourceTree = "<group>"; };
+		657C4194191B62BA00EB2613 /* CAVReader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CAVReader.cpp; sourceTree = "<group>"; };
+		657C4195191B62BA00EB2613 /* CAVReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAVReader.h; sourceTree = "<group>"; };
+		657C4208191B6B5000EB2613 /* ffmpegUtil.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ffmpegUtil.c; sourceTree = "<group>"; };
+		657C420A191B6B5E00EB2613 /* ffmpegUtil.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffmpegUtil.h; sourceTree = "<group>"; };
+		657C420B191B6D2900EB2613 /* BaseReader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BaseReader.h; sourceTree = "<group>"; };
+		657C420E191B891A00EB2613 /* avformat_open_input.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = avformat_open_input.txt; sourceTree = "<group>"; };
+		65FDBF20194BE84600503752 /* BaseNode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BaseNode.cpp; sourceTree = "<group>"; };
+		65FDBF21194BE84600503752 /* BaseNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BaseNode.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		657C4119191B325100EB2613 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		657C4129191B325200EB2613 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				657C4134191B325200EB2613 /* libVideoEdite.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		657C4113191B325100EB2613 = {
+			isa = PBXGroup;
+			children = (
+				657C4121191B325100EB2613 /* VideoEdite */,
+				657C4135191B325200EB2613 /* VideoEditeTests */,
+				657C411E191B325100EB2613 /* Frameworks */,
+				657C411D191B325100EB2613 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		657C411D191B325100EB2613 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				657C411C191B325100EB2613 /* libVideoEdite.a */,
+				657C412C191B325200EB2613 /* VideoEditeTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		657C411E191B325100EB2613 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		657C4121191B325100EB2613 /* VideoEdite */ = {
+			isa = PBXGroup;
+			children = (
+				65FDBF1F194BE82100503752 /* Project */,
+				657C4124191B325100EB2613 /* VideoEdite.h */,
+				657C420C191B86B900EB2613 /* Interpret */,
+				657C4207191B639A00EB2613 /* FFmpegUtil */,
+				657C4122191B325100EB2613 /* Supporting Files */,
+			);
+			path = VideoEdite;
+			sourceTree = "<group>";
+		};
+		657C4122191B325100EB2613 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				657C4123191B325100EB2613 /* VideoEdite-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		657C4135191B325200EB2613 /* VideoEditeTests */ = {
+			isa = PBXGroup;
+			children = (
+				657C413B191B325200EB2613 /* VideoEditeTests.m */,
+				657C4136191B325200EB2613 /* Supporting Files */,
+			);
+			path = VideoEditeTests;
+			sourceTree = "<group>";
+		};
+		657C4136191B325200EB2613 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				657C4137191B325200EB2613 /* VideoEditeTests-Info.plist */,
+				657C4138191B325200EB2613 /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		657C4207191B639A00EB2613 /* FFmpegUtil */ = {
+			isa = PBXGroup;
+			children = (
+				657C4194191B62BA00EB2613 /* CAVReader.cpp */,
+				657C4195191B62BA00EB2613 /* CAVReader.h */,
+				657C4208191B6B5000EB2613 /* ffmpegUtil.c */,
+				657C420A191B6B5E00EB2613 /* ffmpegUtil.h */,
+				657C420B191B6D2900EB2613 /* BaseReader.h */,
+			);
+			name = FFmpegUtil;
+			sourceTree = "<group>";
+		};
+		657C420C191B86B900EB2613 /* Interpret */ = {
+			isa = PBXGroup;
+			children = (
+				657C420E191B891A00EB2613 /* avformat_open_input.txt */,
+			);
+			name = Interpret;
+			path = interpret;
+			sourceTree = "<group>";
+		};
+		65FDBF1F194BE82100503752 /* Project */ = {
+			isa = PBXGroup;
+			children = (
+				65FDBF20194BE84600503752 /* BaseNode.cpp */,
+				65FDBF21194BE84600503752 /* BaseNode.h */,
+			);
+			name = Project;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		657C411B191B325100EB2613 /* VideoEdite */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 657C413F191B325200EB2613 /* Build configuration list for PBXNativeTarget "VideoEdite" */;
+			buildPhases = (
+				657C4118191B325100EB2613 /* Sources */,
+				657C4119191B325100EB2613 /* Frameworks */,
+				657C411A191B325100EB2613 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VideoEdite;
+			productName = VideoEdite;
+			productReference = 657C411C191B325100EB2613 /* libVideoEdite.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		657C412B191B325200EB2613 /* VideoEditeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 657C4142191B325200EB2613 /* Build configuration list for PBXNativeTarget "VideoEditeTests" */;
+			buildPhases = (
+				657C4128191B325200EB2613 /* Sources */,
+				657C4129191B325200EB2613 /* Frameworks */,
+				657C412A191B325200EB2613 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				657C4133191B325200EB2613 /* PBXTargetDependency */,
+			);
+			name = VideoEditeTests;
+			productName = VideoEditeTests;
+			productReference = 657C412C191B325200EB2613 /* VideoEditeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		657C4114191B325100EB2613 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0510;
+				ORGANIZATIONNAME = ronglei;
+			};
+			buildConfigurationList = 657C4117191B325100EB2613 /* Build configuration list for PBXProject "VideoEdite" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 657C4113191B325100EB2613;
+			productRefGroup = 657C411D191B325100EB2613 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				657C411B191B325100EB2613 /* VideoEdite */,
+				657C412B191B325200EB2613 /* VideoEditeTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		657C412A191B325200EB2613 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				657C413A191B325200EB2613 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		657C4118191B325100EB2613 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				657C4209191B6B5000EB2613 /* ffmpegUtil.c in Sources */,
+				65FDBF22194BE84600503752 /* BaseNode.cpp in Sources */,
+				657C4196191B62BA00EB2613 /* CAVReader.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		657C4128191B325200EB2613 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				657C413C191B325200EB2613 /* VideoEditeTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		657C4133191B325200EB2613 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 657C411B191B325100EB2613 /* VideoEdite */;
+			targetProxy = 657C4132191B325200EB2613 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		657C4138191B325200EB2613 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				657C4139191B325200EB2613 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		657C413D191B325200EB2613 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		657C413E191B325200EB2613 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		657C4140191B325200EB2613 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				DSTROOT = /tmp/VideoEdite.dst;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "VideoEdite/VideoEdite-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					"\"$(SRCROOT)/../Supports/ffmpeg/include\"",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../Supports/ffmpeg/lib\"",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				VALID_ARCHS = "i386 arm64 armv7 armv7s x86_64";
+			};
+			name = Debug;
+		};
+		657C4141191B325200EB2613 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				DSTROOT = /tmp/VideoEdite.dst;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "VideoEdite/VideoEdite-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					"\"$(SRCROOT)/../Supports/ffmpeg/include\"",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../Supports/ffmpeg/lib\"",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				VALID_ARCHS = "i386 arm64 armv7 armv7s x86_64";
+			};
+			name = Release;
+		};
+		657C4143191B325200EB2613 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "VideoEdite/VideoEdite-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "VideoEditeTests/VideoEditeTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Debug;
+		};
+		657C4144191B325200EB2613 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "VideoEdite/VideoEdite-Prefix.pch";
+				INFOPLIST_FILE = "VideoEditeTests/VideoEditeTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		657C4117191B325100EB2613 /* Build configuration list for PBXProject "VideoEdite" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				657C413D191B325200EB2613 /* Debug */,
+				657C413E191B325200EB2613 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		657C413F191B325200EB2613 /* Build configuration list for PBXNativeTarget "VideoEdite" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				657C4140191B325200EB2613 /* Debug */,
+				657C4141191B325200EB2613 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		657C4142191B325200EB2613 /* Build configuration list for PBXNativeTarget "VideoEditeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				657C4143191B325200EB2613 /* Debug */,
+				657C4144191B325200EB2613 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 657C4114191B325100EB2613 /* Project object */;
+}

@@ -1,0 +1,1046 @@
+现在我们开始分析ffmpeg的源代码（因为ffmpeg的编码器是基于X264项目的，所以我们的代码还要追踪带X264中去）：
+avcodec_register_all()做了些什么
+因为我们关心的是H.264的编码所以我们只关心该函数中对X264编码器做了些什么，该函数主要是注册ffmpeg提供的所有编解码器，由于该函数较长，但都是相同的动作（注册编解码器），所以我们只列出部分的代码：
+void avcodec_register_all(void)
+{
+    static int initialized;
+    
+    if (initialized)
+        return;
+    initialized = 1;
+    
+    /* hardware accelerators */
+    REGISTER_HWACCEL (H263_VAAPI, h263_vaapi);
+    REGISTER_HWACCEL (H264_DXVA2, h264_dxva2);
+    ......
+    
+    /* video codecs */
+    REGISTER_ENCODER (A64MULTI, a64multi);
+    REGISTER_ENCODER (A64MULTI5, a64multi5);
+    ......
+    
+    /* audio codecs */
+    REGISTER_ENCDEC  (AAC, aac);
+    REGISTER_DECODER (AAC_LATM, aac_latm);
+    ......
+    
+    /* PCM codecs */
+    REGISTER_ENCDEC  (PCM_ALAW, pcm_alaw);
+    REGISTER_DECODER (PCM_BLURAY, pcm_bluray);
+    ......
+    
+    /* DPCM codecs */
+    REGISTER_DECODER (INTERPLAY_DPCM, interplay_dpcm);
+    REGISTER_ENCDEC  (ROQ_DPCM, roq_dpcm);
+    ......
+    
+    /* ADPCM codecs */
+    REGISTER_DECODER (ADPCM_4XM, adpcm_4xm);
+    REGISTER_ENCDEC  (ADPCM_ADX, adpcm_adx);
+    ......
+    
+    /* subtitles */
+    REGISTER_ENCDEC  (ASS, ass);
+    REGISTER_ENCDEC  (DVBSUB, dvbsub);
+    ......
+    
+    /* external libraries */
+    REGISTER_DECODER (LIBCELT, libcelt);
+    ......
+    
+    // 这是我们关注的libx264编码器
+    REGISTER_ENCODER (LIBX264, libx264);
+    ......
+    
+    /* text */
+    REGISTER_DECODER (BINTEXT, bintext);
+    ......
+    
+    /* parsers */
+    REGISTER_PARSER  (AAC, aac);
+    REGISTER_PARSER  (AAC_LATM, aac_latm);
+    ......
+    
+    /* bitstream filters */
+    REGISTER_BSF     (AAC_ADTSTOASC, aac_adtstoasc);
+    REGISTER_BSF     (CHOMP, chomp);
+    ......
+}
+很显然，我们关心的是REGISTER_ENCODER (LIBX264, libx264)，这里是注册libx264编码器：
+#define REGISTER_ENCODER(X,x) { \
+extern AVCodec ff_##x##_encoder; \
+if(CONFIG_##X##_ENCODER)  avcodec_register(&ff_##x##_encoder); }
+将宏以参数LIBX264和libx264展开得到：
+{
+    extern AVCodec ff_libx264_encoder;
+    if (CONFIG_LIBX264_ENCODER)
+        avcodec_register(&ff_libx264_encoder);
+        }
+在ffmpeg中查找ff_libx264_encoder变量：
+AVCodec ff_libx264_encoder = {
+    .name             = "libx264",
+    .type             = AVMEDIA_TYPE_VIDEO,
+    .id               = AV_CODEC_ID_H264,
+    .priv_data_size   = sizeof(X264Context),
+    <span style="color:#ff6666;">.init             = X264_init,</span>
+    .encode2          = X264_frame,
+    .close            = X264_close,
+    .capabilities     = CODEC_CAP_DELAY | CODEC_CAP_AUTO_THREADS,
+    .long_name
+    = NULL_IF_CONFIG_SMALL("libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"),
+    .priv_class       = &class,
+    .defaults         = x264_defaults,
+    .init_static_data = X264_init_static,
+};
+看到这个结构体中的init成员，我们可以推测这个成员注册的X264_init函数一定是对X264编码器的各项参数做初始化工作，这给我们提供了继续查找下去的线索，稍后我们来分析，这里有个条件判断CONFIG_LIBX264_ENCODER，我们在ffmpeg工程中查找，发现在它Config.mak中，这个文件是在咱们编译ffmpeg工程时由./configure根据你的选项自动生成的，还记得我们编译时用了--enable-libx264选项吗(我们要使用X264编码器，当然要指定该选项)？所以有CONFIG_LIBX264_ENCODER=yes，因此这里可以成功注册x264编码器，如果当初没有指定该选项，编码器是不会注册进去的。
+
+而avcodec_register则是将具体的codec注册到编解码器链表中去：
+void avcodec_register(AVCodec *codec)
+{
+    AVCodec **p;
+    avcodec_init();
+    p = &first_avcodec;
+    while (*p != NULL) p = &(*p)->next;
+    *p = codec;
+    codec->next = NULL;
+    
+    if (codec->init_static_data)
+        codec->init_static_data(codec);
+}
+这里first_avcodec是一个全局变量，作为编解码器链表的起始位置，之后注册的编解码器都加入到这个链表中去。
+
+当前位置: 主页>音视频技术>音视频编解码>
+从ffmpeg源代码分析如何解决ffmpeg编码的延迟问题(3)
+落鹤生 发布于 2013-10-15 18:57 点击:1233次 	
+avcodec_find_encoder 该函数就是在编解码器链表中找出你需要的codec，如果你之前没有注册该device，将会查找失败，从代码中可以看出，它就是中first_avcodec开始查找每个节点，比较每个device的id是否与你参数给的
+TAG: FFMPEG  av_op_set  编码参数  
+
+  
+avcodec_find_encoder
+该函数就是在编解码器链表中找出你需要的codec，如果你之前没有注册该device，将会查找失败，从代码中可以看出，它就是中first_avcodec开始查找每个节点，比较每个device的id是否与你参数给的一直，如果是，则找到了，并返回之：
+AVCodec *avcodec_find_encoder(enum AVCodecID id) 
+{ 
+    AVCodec *p, *experimental=NULL; 
+    p = first_avcodec; 
+    id= remap_deprecated_codec_id(id); 
+    while (p) { 
+        if (av_codec_is_encoder(p) && p->id == id) { 
+            if (p->capabilities & CODEC_CAP_EXPERIMENTAL && !experimental) { 
+                experimental = p; 
+            } else 
+                return p; 
+        } 
+        p = p->next; 
+    } 
+    return experimental; 
+} 
+至此你应该理解了为什么每次使 用编码器前，我们都会先调用avcodec_register_all或者avcodec_register，你也了解到了为什么你调用了 avcodec_register_all，但查找AV_CODEC_ID_H264编码器时会还是会失败（因为你编译ffmpeg时未指定 --enable-libx264）。
+打开编码器，avcodec_open2
+这个函数主要是打开你找到的编码器，所谓打开其实是设置编码器的各项参数，要设置的参数数据则是从我么设置的AVCodecContext来获得的。
+int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options) 
+{ 
+    int ret = 0; 
+    AVDictionary *tmp = NULL; 
+ 
+    if (avcodec_is_open(avctx)) 
+        return 0; 
+ 
+    if ((!codec && !avctx->codec)) { 
+        av_log(avctx, AV_LOG_ERROR, "No codec provided to avcodec_open2().\n"); 
+        return AVERROR(EINVAL); 
+    } 
+    if ((codec && avctx->codec && codec != avctx->codec)) { 
+        av_log(avctx, AV_LOG_ERROR, "This AVCodecContext was allocated for %s, " 
+               "but %s passed to avcodec_open2().\n", avctx->codec->name, codec->name); 
+        return AVERROR(EINVAL); 
+    } 
+    if (!codec) 
+        codec = avctx->codec; 
+ 
+    if (avctx->extradata_size < 0 || avctx->extradata_size >= FF_MAX_EXTRADATA_SIZE) 
+        return AVERROR(EINVAL); 
+ 
+    if (options) 
+        av_dict_copy(&tmp, *options, 0); 
+ 
+    /* If there is a user-supplied mutex locking routine, call it. */ 
+    if (ff_lockmgr_cb) { 
+        if ((*ff_lockmgr_cb)(&codec_mutex, AV_LOCK_OBTAIN)) 
+            return -1; 
+    } 
+ 
+    entangled_thread_counter++; 
+    if(entangled_thread_counter != 1){ 
+        av_log(avctx, AV_LOG_ERROR, "insufficient thread locking around avcodec_open/close()\n"); 
+        ret = -1; 
+        goto end; 
+    } 
+ 
+    avctx->internal = av_mallocz(sizeof(AVCodecInternal)); 
+    if (!avctx->internal) { 
+        ret = AVERROR(ENOMEM); 
+        goto end; 
+    } 
+ 
+    if (codec->priv_data_size > 0) { 
+      if(!avctx->priv_data){ 
+        avctx->priv_data = av_mallocz(codec->priv_data_size); 
+        if (!avctx->priv_data) { 
+            ret = AVERROR(ENOMEM); 
+            goto end; 
+        } 
+        if (codec->priv_class) { 
+            *(const AVClass**)avctx->priv_data= codec->priv_class; 
+            av_opt_set_defaults(avctx->priv_data); 
+        } 
+      } 
+      if (codec->priv_class && (ret = av_opt_set_dict(avctx->priv_data, &tmp)) < 0) 
+          goto free_and_end; 
+    } else { 
+        avctx->priv_data = NULL; 
+    } 
+    if ((ret = av_opt_set_dict(avctx, &tmp)) < 0) 
+        goto free_and_end; 
+ 
+    if (codec->capabilities & CODEC_CAP_EXPERIMENTAL) 
+        if (avctx->strict_std_compliance > FF_COMPLIANCE_EXPERIMENTAL) { 
+            av_log(avctx, AV_LOG_ERROR, "Codec is experimental but experimental codecs are not enabled, try -strict -2\n"); 
+            ret = -1; 
+            goto free_and_end; 
+        } 
+ 
+    //We only call avcodec_set_dimensions() for non h264 codecs so as not to overwrite previously setup dimensions 
+    if(!( avctx->coded_width && avctx->coded_height && avctx->width && avctx->height && avctx->codec_id == AV_CODEC_ID_H264)){ 
+    if(avctx->coded_width && avctx->coded_height) 
+        avcodec_set_dimensions(avctx, avctx->coded_width, avctx->coded_height); 
+    else if(avctx->width && avctx->height) 
+        avcodec_set_dimensions(avctx, avctx->width, avctx->height); 
+    } 
+ 
+    if ((avctx->coded_width || avctx->coded_height || avctx->width || avctx->height) 
+        && (  av_image_check_size(avctx->coded_width, avctx->coded_height, 0, avctx) < 0 
+           || av_image_check_size(avctx->width,       avctx->height,       0, avctx) < 0)) { 
+        av_log(avctx, AV_LOG_WARNING, "ignoring invalid width/height values\n"); 
+        avcodec_set_dimensions(avctx, 0, 0); 
+    } 
+ 
+    /* if the decoder init function was already called previously, 
+       free the already allocated subtitle_header before overwriting it */ 
+    if (av_codec_is_decoder(codec)) 
+        av_freep(&avctx->subtitle_header); 
+ 
+#define SANE_NB_CHANNELS 128U 
+    if (avctx->channels > SANE_NB_CHANNELS) { 
+        ret = AVERROR(EINVAL); 
+        goto free_and_end; 
+    } 
+ 
+    avctx->codec = codec; 
+    if ((avctx->codec_type == AVMEDIA_TYPE_UNKNOWN || avctx->codec_type == codec->type) && 
+        avctx->codec_id == AV_CODEC_ID_NONE) { 
+        avctx->codec_type = codec->type; 
+        avctx->codec_id   = codec->id; 
+    } 
+    if (avctx->codec_id != codec->id || (avctx->codec_type != codec->type 
+                           && avctx->codec_type != AVMEDIA_TYPE_ATTACHMENT)) { 
+        av_log(avctx, AV_LOG_ERROR, "codec type or id mismatches\n"); 
+        ret = AVERROR(EINVAL); 
+        goto free_and_end; 
+    } 
+    avctx->frame_number = 0; 
+    avctx->codec_descriptor = avcodec_descriptor_get(avctx->codec_id); 
+ 
+    if (avctx->codec_type == AVMEDIA_TYPE_AUDIO && 
+        (!avctx->time_base.num || !avctx->time_base.den)) { 
+        avctx->time_base.num = 1; 
+        avctx->time_base.den = avctx->sample_rate; 
+    } 
+ 
+    if (!HAVE_THREADS) 
+        av_log(avctx, AV_LOG_WARNING, "Warning: not compiled with thread support, using thread emulation\n"); 
+ 
+    if (HAVE_THREADS) { 
+        entangled_thread_counter--; //we will instanciate a few encoders thus kick the counter to prevent false detection of a problem 
+        ret = ff_frame_thread_encoder_init(avctx, options ? *options : NULL); 
+        entangled_thread_counter++; 
+        if (ret < 0) 
+            goto free_and_end; 
+    } 
+ 
+    if (HAVE_THREADS && !avctx->thread_opaque 
+        && !(avctx->internal->frame_thread_encoder && (avctx->active_thread_type&FF_THREAD_FRAME))) { 
+        ret = ff_thread_init(avctx); 
+        if (ret < 0) { 
+            goto free_and_end; 
+        } 
+    } 
+    if (!HAVE_THREADS && !(codec->capabilities & CODEC_CAP_AUTO_THREADS)) 
+        avctx->thread_count = 1; 
+ 
+    if (avctx->codec->max_lowres < avctx->lowres || avctx->lowres < 0) { 
+        av_log(avctx, AV_LOG_ERROR, "The maximum value for lowres supported by the decoder is %d\n", 
+               avctx->codec->max_lowres); 
+        ret = AVERROR(EINVAL); 
+        goto free_and_end; 
+    } 
+ 
+    if (av_codec_is_encoder(avctx->codec)) { 
+        int i; 
+        if (avctx->codec->sample_fmts) { 
+            for (i = 0; avctx->codec->sample_fmts[i] != AV_SAMPLE_FMT_NONE; i++) 
+                if (avctx->sample_fmt == avctx->codec->sample_fmts[i]) 
+                    break; 
+            if (avctx->codec->sample_fmts[i] == AV_SAMPLE_FMT_NONE) { 
+                av_log(avctx, AV_LOG_ERROR, "Specified sample_fmt is not supported.\n"); 
+                ret = AVERROR(EINVAL); 
+                goto free_and_end; 
+            } 
+        } 
+        if (avctx->codec->pix_fmts) { 
+            for (i = 0; avctx->codec->pix_fmts[i] != PIX_FMT_NONE; i++) 
+                if (avctx->pix_fmt == avctx->codec->pix_fmts[i]) 
+                    break; 
+            if (avctx->codec->pix_fmts[i] == PIX_FMT_NONE 
+                && !((avctx->codec_id == AV_CODEC_ID_MJPEG || avctx->codec_id == AV_CODEC_ID_LJPEG) 
+                     && avctx->strict_std_compliance <= FF_COMPLIANCE_UNOFFICIAL)) { 
+                av_log(avctx, AV_LOG_ERROR, "Specified pix_fmt is not supported\n"); 
+                ret = AVERROR(EINVAL); 
+                goto free_and_end; 
+            } 
+        } 
+        if (avctx->codec->supported_samplerates) { 
+            for (i = 0; avctx->codec->supported_samplerates[i] != 0; i++) 
+                if (avctx->sample_rate == avctx->codec->supported_samplerates[i]) 
+                    break; 
+            if (avctx->codec->supported_samplerates[i] == 0) { 
+                av_log(avctx, AV_LOG_ERROR, "Specified sample_rate is not supported\n"); 
+                ret = AVERROR(EINVAL); 
+                goto free_and_end; 
+            } 
+        } 
+        if (avctx->codec->channel_layouts) { 
+            if (!avctx->channel_layout) { 
+                av_log(avctx, AV_LOG_WARNING, "channel_layout not specified\n"); 
+            } else { 
+                for (i = 0; avctx->codec->channel_layouts[i] != 0; i++) 
+                    if (avctx->channel_layout == avctx->codec->channel_layouts[i]) 
+                        break; 
+                if (avctx->codec->channel_layouts[i] == 0) { 
+                    av_log(avctx, AV_LOG_ERROR, "Specified channel_layout is not supported\n"); 
+                    ret = AVERROR(EINVAL); 
+                    goto free_and_end; 
+                } 
+            } 
+        } 
+        if (avctx->channel_layout && avctx->channels) { 
+            if (av_get_channel_layout_nb_channels(avctx->channel_layout) != avctx->channels) { 
+                av_log(avctx, AV_LOG_ERROR, "channel layout does not match number of channels\n"); 
+                ret = AVERROR(EINVAL); 
+                goto free_and_end; 
+            } 
+        } else if (avctx->channel_layout) { 
+            avctx->channels = av_get_channel_layout_nb_channels(avctx->channel_layout); 
+        } 
+    } 
+ 
+    avctx->pts_correction_num_faulty_pts = 
+    avctx->pts_correction_num_faulty_dts = 0; 
+    avctx->pts_correction_last_pts = 
+    avctx->pts_correction_last_dts = INT64_MIN; 
+ 
+<span style="color:#ff6666;">    //////////////////////////////////////////////////////////////////////////////////////////////// 
+    // 这里会调用编码器的中指定的初始化函数init, 对于x264编码器，也就是调用ff_libx264_encoder中指定的X264_init 
+    if(avctx->codec->init && (!(avctx->active_thread_type&FF_THREAD_FRAME) || avctx->internal->frame_thread_encoder)){ 
+        ret = avctx->codec->init(avctx); 
+        if (ret < 0) { 
+            goto free_and_end; 
+        } 
+    } 
+    ////////////////////////////////////////////////////////////////////////////////////////////////</span> 
+ 
+    ret=0; 
+ 
+    if (av_codec_is_decoder(avctx->codec)) { 
+        if (!avctx->bit_rate) 
+            avctx->bit_rate = get_bit_rate(avctx); 
+        /* validate channel layout from the decoder */ 
+        if (avctx->channel_layout && 
+            av_get_channel_layout_nb_channels(avctx->channel_layout) != avctx->channels) { 
+            av_log(avctx, AV_LOG_WARNING, "channel layout does not match number of channels\n"); 
+            avctx->channel_layout = 0; 
+        } 
+    } 
+end: 
+    entangled_thread_counter--; 
+ 
+    /* Release any user-supplied mutex. */ 
+    if (ff_lockmgr_cb) { 
+        (*ff_lockmgr_cb)(&codec_mutex, AV_LOCK_RELEASE); 
+    } 
+    if (options) { 
+        av_dict_free(options); 
+        *options = tmp; 
+    } 
+ 
+    return ret; 
+free_and_end: 
+    av_dict_free(&tmp); 
+    av_freep(&avctx->priv_data); 
+    av_freep(&avctx->internal); 
+    avctx->codec= NULL; 
+    goto end; 
+} 
+看看我们在代码中标注的那几行代码：
+if(avctx->codec->init
+ && (!(avctx->active_thread_type&FF_THREAD_FRAME)
+ || avctx->internal->frame_thread_encoder)){ 
+        ret = avctx->codec->init(avctx); 
+        if (ret < 0) { 
+            goto free_and_end; 
+        } 
+} 
+这里如果codec的init 成员指定了对codec的初始化函数时，它会调用该初始化函数，通过前面的分析我们知道，
+X264编码器的初始化函数指定为X264_init，该函数的 参数即是我们给定的AVCodecContext，
+下面我们来看看X264_init做了些什么。
+
+当前位置: 主页>音视频技术>音视频编解码>
+从ffmpeg源代码分析如何解决ffmpeg编码的延迟问题(4)
+落鹤生 发布于 2013-10-15 18:57 点击:1234次 	
+X264编码器的初始化，X264_init 首先列出源代码： static av_cold int X264_init(AVCodecContext*avctx) { X264Context*x4=avctx-priv_data; int sw,sh; x264_param_default(x4-params); x4-params.b_deblocking_fi
+TAG: FFMPEG  av_op_set  编码参数  
+
+  
+X264编码器的初始化，X264_init
+首先列出源代码：
+static av_cold int X264_init(AVCodecContext *avctx) 
+{ 
+    X264Context *x4 = avctx->priv_data; 
+    int sw,sh; 
+ 
+    x264_param_default(&x4->params); 
+ 
+    x4->params.b_deblocking_filter         = avctx->flags & CODEC_FLAG_LOOP_FILTER; 
+ 
+    x4->params.rc.f_ip_factor             = 1 / fabs(avctx->i_quant_factor); 
+    x4->params.rc.f_pb_factor             = avctx->b_quant_factor; 
+    x4->params.analyse.i_chroma_qp_offset = avctx->chromaoffset; 
+    if (x4->preset || x4->tune) 
+ 
+<span style="color:#ff6666;">        //////////////////////////////////////////////////////////////////////////////////////// 
+        // 在这里面会设置很多关键的参数，这个函数式X264提供的，接下来我们要到X264中查看其源代码 
+        if (x264_param_default_preset(&x4->params, x4->preset, x4->tune) < 0) { 
+            int i; 
+            av_log(avctx, AV_LOG_ERROR, "Error setting preset/tune %s/%s.\n", x4->preset, x4->tune); 
+            av_log(avctx, AV_LOG_INFO, "Possible presets:"); 
+            for (i = 0; x264_preset_names[i]; i++) 
+                av_log(avctx, AV_LOG_INFO, " %s", x264_preset_names[i]); 
+            av_log(avctx, AV_LOG_INFO, "\n"); 
+            av_log(avctx, AV_LOG_INFO, "Possible tunes:"); 
+            for (i = 0; x264_tune_names[i]; i++) 
+                av_log(avctx, AV_LOG_INFO, " %s", x264_tune_names[i]); 
+            av_log(avctx, AV_LOG_INFO, "\n"); 
+            return AVERROR(EINVAL); 
+        } 
+        /////////////////////////////////////////////////////////////////////////////////////////</span> 
+ 
+    if (avctx->level > 0) 
+        x4->params.i_level_idc = avctx->level; 
+ 
+    x4->params.pf_log               = X264_log; 
+    x4->params.p_log_private        = avctx; 
+    x4->params.i_log_level          = X264_LOG_DEBUG; 
+    x4->params.i_csp                = convert_pix_fmt(avctx->pix_fmt); 
+ 
+    OPT_STR("weightp", x4->wpredp); 
+ 
+    if (avctx->bit_rate) { 
+        x4->params.rc.i_bitrate   = avctx->bit_rate / 1000; 
+        x4->params.rc.i_rc_method = X264_RC_ABR; 
+    } 
+    x4->params.rc.i_vbv_buffer_size = avctx->rc_buffer_size / 1000; 
+    x4->params.rc.i_vbv_max_bitrate = avctx->rc_max_rate    / 1000; 
+    x4->params.rc.b_stat_write      = avctx->flags & CODEC_FLAG_PASS1; 
+    if (avctx->flags & CODEC_FLAG_PASS2) { 
+        x4->params.rc.b_stat_read = 1; 
+    } else { 
+        if (x4->crf >= 0) { 
+            x4->params.rc.i_rc_method   = X264_RC_CRF; 
+            x4->params.rc.f_rf_constant = x4->crf; 
+        } else if (x4->cqp >= 0) { 
+            x4->params.rc.i_rc_method   = X264_RC_CQP; 
+            x4->params.rc.i_qp_constant = x4->cqp; 
+        } 
+ 
+        if (x4->crf_max >= 0) 
+            x4->params.rc.f_rf_constant_max = x4->crf_max; 
+    } 
+ 
+    if (avctx->rc_buffer_size && avctx->rc_initial_buffer_occupancy && 
+        (avctx->rc_initial_buffer_occupancy <= avctx->rc_buffer_size)) { 
+        x4->params.rc.f_vbv_buffer_init = 
+            (float)avctx->rc_initial_buffer_occupancy / avctx->rc_buffer_size; 
+    } 
+ 
+    OPT_STR("level", x4->level); 
+ 
+    if(x4->x264opts){ 
+        const char *p= x4->x264opts; 
+        while(p){ 
+            char param[256]={0}, val[256]={0}; 
+            if(sscanf(p, "%255[^:=]=%255[^:]", param, val) == 1){ 
+                OPT_STR(param, "1"); 
+            }else 
+                OPT_STR(param, val); 
+            p= strchr(p, ':'); 
+            p+=!!p; 
+        } 
+    } 
+ 
+    if (avctx->me_method == ME_EPZS) 
+        x4->params.analyse.i_me_method = X264_ME_DIA; 
+    else if (avctx->me_method == ME_HEX) 
+        x4->params.analyse.i_me_method = X264_ME_HEX; 
+    else if (avctx->me_method == ME_UMH) 
+        x4->params.analyse.i_me_method = X264_ME_UMH; 
+    else if (avctx->me_method == ME_FULL) 
+        x4->params.analyse.i_me_method = X264_ME_ESA; 
+    else if (avctx->me_method == ME_TESA) 
+        x4->params.analyse.i_me_method = X264_ME_TESA; 
+ 
+    if (avctx->gop_size >= 0) 
+        x4->params.i_keyint_max         = avctx->gop_size; 
+    if (avctx->max_b_frames >= 0) 
+        x4->params.i_bframe             = avctx->max_b_frames; 
+    if (avctx->scenechange_threshold >= 0) 
+        x4->params.i_scenecut_threshold = avctx->scenechange_threshold; 
+    if (avctx->qmin >= 0) 
+        x4->params.rc.i_qp_min          = avctx->qmin; 
+    if (avctx->qmax >= 0) 
+        x4->params.rc.i_qp_max          = avctx->qmax; 
+    if (avctx->max_qdiff >= 0) 
+        x4->params.rc.i_qp_step         = avctx->max_qdiff; 
+    if (avctx->qblur >= 0) 
+        x4->params.rc.f_qblur           = avctx->qblur;     /* temporally blur quants */ 
+    if (avctx->qcompress >= 0) 
+        x4->params.rc.f_qcompress       = avctx->qcompress; /* 0.0 => cbr, 1.0 => constant qp */ 
+    if (avctx->refs >= 0) 
+        x4->params.i_frame_reference    = avctx->refs; 
+    if (avctx->trellis >= 0) 
+        x4->params.analyse.i_trellis    = avctx->trellis; 
+    if (avctx->me_range >= 0) 
+        x4->params.analyse.i_me_range   = avctx->me_range; 
+    if (avctx->noise_reduction >= 0) 
+        x4->params.analyse.i_noise_reduction = avctx->noise_reduction; 
+    if (avctx->me_subpel_quality >= 0) 
+        x4->params.analyse.i_subpel_refine   = avctx->me_subpel_quality; 
+    if (avctx->b_frame_strategy >= 0) 
+        x4->params.i_bframe_adaptive = avctx->b_frame_strategy; 
+    if (avctx->keyint_min >= 0) 
+        x4->params.i_keyint_min = avctx->keyint_min; 
+    if (avctx->coder_type >= 0) 
+        x4->params.b_cabac = avctx->coder_type == FF_CODER_TYPE_AC; 
+    if (avctx->me_cmp >= 0) 
+        x4->params.analyse.b_chroma_me = avctx->me_cmp & FF_CMP_CHROMA; 
+ 
+    if (x4->aq_mode >= 0) 
+        x4->params.rc.i_aq_mode = x4->aq_mode; 
+    if (x4->aq_strength >= 0) 
+        x4->params.rc.f_aq_strength = x4->aq_strength; 
+    PARSE_X264_OPT("psy-rd", psy_rd); 
+    PARSE_X264_OPT("deblock", deblock); 
+    PARSE_X264_OPT("partitions", partitions); 
+    PARSE_X264_OPT("stats", stats); 
+    if (x4->psy >= 0) 
+        x4->params.analyse.b_psy  = x4->psy; 
+    if (x4->rc_lookahead >= 0) 
+        x4->params.rc.i_lookahead = x4->rc_lookahead; 
+    if (x4->weightp >= 0) 
+        x4->params.analyse.i_weighted_pred = x4->weightp; 
+    if (x4->weightb >= 0) 
+        x4->params.analyse.b_weighted_bipred = x4->weightb; 
+    if (x4->cplxblur >= 0) 
+        x4->params.rc.f_complexity_blur = x4->cplxblur; 
+ 
+    if (x4->ssim >= 0) 
+        x4->params.analyse.b_ssim = x4->ssim; 
+    if (x4->intra_refresh >= 0) 
+        x4->params.b_intra_refresh = x4->intra_refresh; 
+    if (x4->b_bias != INT_MIN) 
+        x4->params.i_bframe_bias              = x4->b_bias; 
+    if (x4->b_pyramid >= 0) 
+        x4->params.i_bframe_pyramid = x4->b_pyramid; 
+    if (x4->mixed_refs >= 0) 
+        x4->params.analyse.b_mixed_references = x4->mixed_refs; 
+    if (x4->dct8x8 >= 0) 
+        x4->params.analyse.b_transform_8x8    = x4->dct8x8; 
+    if (x4->fast_pskip >= 0) 
+        x4->params.analyse.b_fast_pskip       = x4->fast_pskip; 
+    if (x4->aud >= 0) 
+        x4->params.b_aud                      = x4->aud; 
+    if (x4->mbtree >= 0) 
+        x4->params.rc.b_mb_tree               = x4->mbtree; 
+    if (x4->direct_pred >= 0) 
+        x4->params.analyse.i_direct_mv_pred   = x4->direct_pred; 
+ 
+    if (x4->slice_max_size >= 0) 
+        x4->params.i_slice_max_size =  x4->slice_max_size; 
+ 
+    if (x4->fastfirstpass) 
+        x264_param_apply_fastfirstpass(&x4->params); 
+ 
+    if (x4->profile) 
+        if (x264_param_apply_profile(&x4->params, x4->profile) < 0) { 
+            int i; 
+            av_log(avctx, AV_LOG_ERROR, "Error setting profile %s.\n", x4->profile); 
+            av_log(avctx, AV_LOG_INFO, "Possible profiles:"); 
+            for (i = 0; x264_profile_names[i]; i++) 
+                av_log(avctx, AV_LOG_INFO, " %s", x264_profile_names[i]); 
+            av_log(avctx, AV_LOG_INFO, "\n"); 
+            return AVERROR(EINVAL); 
+        } 
+ 
+    x4->params.i_width          = avctx->width; 
+    x4->params.i_height         = avctx->height; 
+    av_reduce(&sw, &sh, avctx->sample_aspect_ratio.num, avctx->sample_aspect_ratio.den, 4096); 
+    x4->params.vui.i_sar_width  = sw; 
+    x4->params.vui.i_sar_height = sh; 
+    x4->params.i_fps_num = x4->params.i_timebase_den = avctx->time_base.den; 
+    x4->params.i_fps_den = x4->params.i_timebase_num = avctx->time_base.num; 
+ 
+    x4->params.analyse.b_psnr = avctx->flags & CODEC_FLAG_PSNR; 
+ 
+    x4->params.i_threads      = avctx->thread_count; 
+    if (avctx->thread_type) 
+        x4->params.b_sliced_threads = avctx->thread_type == FF_THREAD_SLICE; 
+ 
+    x4->params.b_interlaced   = avctx->flags & CODEC_FLAG_INTERLACED_DCT; 
+ 
+//    x4->params.b_open_gop     = !(avctx->flags & CODEC_FLAG_CLOSED_GOP); 
+ 
+    x4->params.i_slice_count  = avctx->slices; 
+ 
+    x4->params.vui.b_fullrange = avctx->pix_fmt == PIX_FMT_YUVJ420P; 
+ 
+    if (avctx->flags & CODEC_FLAG_GLOBAL_HEADER) 
+        x4->params.b_repeat_headers = 0; 
+ 
+    // update AVCodecContext with x264 parameters 
+    avctx->has_b_frames = x4->params.i_bframe ? 
+        x4->params.i_bframe_pyramid ? 2 : 1 : 0; 
+    if (avctx->max_b_frames < 0) 
+        avctx->max_b_frames = 0; 
+ 
+    avctx->bit_rate = x4->params.rc.i_bitrate*1000; 
+    x4->enc = x264_encoder_open(&x4->params); 
+    if (!x4->enc) 
+        return -1; 
+ 
+    avctx->coded_frame = &x4->out_pic; 
+ 
+    if (avctx->flags & CODEC_FLAG_GLOBAL_HEADER) { 
+        x264_nal_t *nal; 
+        uint8_t *p; 
+        int nnal, s, i; 
+ 
+        s = x264_encoder_headers(x4->enc, &nal, &nnal); 
+        avctx->extradata = p = av_malloc(s); 
+ 
+        for (i = 0; i < nnal; i++) { 
+            /* Don't put the SEI in extradata. */ 
+            if (nal[i].i_type == NAL_SEI) { 
+                av_log(avctx, AV_LOG_INFO, "%s\n", nal[i].p_payload+25); 
+                x4->sei_size = nal[i].i_payload; 
+                x4->sei      = av_malloc(x4->sei_size); 
+                memcpy(x4->sei, nal[i].p_payload, nal[i].i_payload); 
+                continue; 
+            } 
+            memcpy(p, nal[i].p_payload, nal[i].i_payload); 
+            p += nal[i].i_payload; 
+        } 
+        avctx->extradata_size = p - avctx->extradata; 
+    } 
+ 
+    return 0; 
+} 
+看看我们做出标记的那几行代码，这里它调用了x264_param_default_preset(&x4->params, x4->preset, x4->tune)，
+所以我们接下来当然是看看这个函数了。
+
+当前位置: 主页>音视频技术>音视频编解码>
+从ffmpeg源代码分析如何解决ffmpeg编码的延迟问题(5)
+落鹤生 发布于 2013-10-15 18:57 点击:1235次 	
+对编码器参数的设置，x264_param_default_preset 这个函数的定义并不在ffmpeg中，因为这是X264提供给外界对编码器做设置API函数， 于是我们在X264项目中查找该函数，它定义在Common.c中，代码如下： int x264_param
+TAG: FFMPEG  av_op_set  编码参数  
+
+  
+对编码器参数的设置，x264_param_default_preset
+    这个函数的定义并不在ffmpeg中，因为这是X264提供给外界对编码器做设置API函数，
+于是我们在X264项目中查找该函数，它定义在Common.c中，代码如下：
+int x264_param_default_preset( x264_param_t *param, const char *preset, const char *tune ) 
+{ 
+    x264_param_default( param ); 
+ 
+    if( preset && <span style="color:#ff6666;">x264_param_apply_preset( param, preset )</span> < 0 ) 
+        return -1; 
+    if( tune && <span style="color:#ff6666;">x264_param_apply_tune( param, tune )</span> < 0 ) 
+        return -1; 
+    return 0; 
+} 
+它首先调用下x264_param_default设置默认参数，这在用户没有指定额外设置时，设置就是使用该函数默认参数，
+但如果用户指定了preset和(或者)tune参数时，它就会进行额外参数的设置。
+    首先看一下应用模式的设置：
+static int x264_param_apply_preset( x264_param_t *param, const char *preset ) 
+{ 
+    char *end; 
+    int i = strtol( preset, &end, 10 ); 
+    if( *end == 0 && i >= 0 && i < sizeof(x264_preset_names)/sizeof(*x264_preset_names)-1 ) 
+        preset = x264_preset_names[i]; 
+ 
+    if( !strcasecmp( preset, "ultrafast" ) ) 
+    { 
+        param->i_frame_reference = 1; 
+        param->i_scenecut_threshold = 0; 
+        param->b_deblocking_filter = 0; 
+        param->b_cabac = 0; 
+        param->i_bframe = 0; 
+        param->analyse.intra = 0; 
+        param->analyse.inter = 0; 
+        param->analyse.b_transform_8x8 = 0; 
+        param->analyse.i_me_method = X264_ME_DIA; 
+        param->analyse.i_subpel_refine = 0; 
+        param->rc.i_aq_mode = 0; 
+        param->analyse.b_mixed_references = 0; 
+        param->analyse.i_trellis = 0; 
+        param->i_bframe_adaptive = X264_B_ADAPT_NONE; 
+        param->rc.b_mb_tree = 0; 
+        param->analyse.i_weighted_pred = X264_WEIGHTP_NONE; 
+        param->analyse.b_weighted_bipred = 0; 
+        param->rc.i_lookahead = 0; 
+    } 
+    else if( !strcasecmp( preset, "superfast" ) ) 
+    { 
+        param->analyse.inter = X264_ANALYSE_I8x8|X264_ANALYSE_I4x4; 
+        param->analyse.i_me_method = X264_ME_DIA; 
+        param->analyse.i_subpel_refine = 1; 
+        param->i_frame_reference = 1; 
+        param->analyse.b_mixed_references = 0; 
+        param->analyse.i_trellis = 0; 
+        param->rc.b_mb_tree = 0; 
+        param->analyse.i_weighted_pred = X264_WEIGHTP_SIMPLE; 
+        param->rc.i_lookahead = 0; 
+    } 
+    else if( !strcasecmp( preset, "veryfast" ) ) 
+    { 
+        param->analyse.i_me_method = X264_ME_HEX; 
+        param->analyse.i_subpel_refine = 2; 
+        param->i_frame_reference = 1; 
+        param->analyse.b_mixed_references = 0; 
+        param->analyse.i_trellis = 0; 
+        param->analyse.i_weighted_pred = X264_WEIGHTP_SIMPLE; 
+        param->rc.i_lookahead = 10; 
+    } 
+    else if( !strcasecmp( preset, "faster" ) ) 
+    { 
+        param->analyse.b_mixed_references = 0; 
+        param->i_frame_reference = 2; 
+        param->analyse.i_subpel_refine = 4; 
+        param->analyse.i_weighted_pred = X264_WEIGHTP_SIMPLE; 
+        param->rc.i_lookahead = 20; 
+    } 
+    else if( !strcasecmp( preset, "fast" ) ) 
+    { 
+        param->i_frame_reference = 2; 
+        param->analyse.i_subpel_refine = 6; 
+        param->analyse.i_weighted_pred = X264_WEIGHTP_SIMPLE; 
+        param->rc.i_lookahead = 30; 
+    } 
+    else if( !strcasecmp( preset, "medium" ) ) 
+    { 
+        /* Default is medium */ 
+    } 
+    else if( !strcasecmp( preset, "slow" ) ) 
+    { 
+        param->analyse.i_me_method = X264_ME_UMH; 
+        param->analyse.i_subpel_refine = 8; 
+        param->i_frame_reference = 5; 
+        param->i_bframe_adaptive = X264_B_ADAPT_TRELLIS; 
+        param->analyse.i_direct_mv_pred = X264_DIRECT_PRED_AUTO; 
+        param->rc.i_lookahead = 50; 
+    } 
+    else if( !strcasecmp( preset, "slower" ) ) 
+    { 
+        param->analyse.i_me_method = X264_ME_UMH; 
+        param->analyse.i_subpel_refine = 9; 
+        param->i_frame_reference = 8; 
+        param->i_bframe_adaptive = X264_B_ADAPT_TRELLIS; 
+        param->analyse.i_direct_mv_pred = X264_DIRECT_PRED_AUTO; 
+        param->analyse.inter |= X264_ANALYSE_PSUB8x8; 
+        param->analyse.i_trellis = 2; 
+        param->rc.i_lookahead = 60; 
+    } 
+    else if( !strcasecmp( preset, "veryslow" ) ) 
+    { 
+        param->analyse.i_me_method = X264_ME_UMH; 
+        param->analyse.i_subpel_refine = 10; 
+        param->analyse.i_me_range = 24; 
+        param->i_frame_reference = 16; 
+        param->i_bframe_adaptive = X264_B_ADAPT_TRELLIS; 
+        param->analyse.i_direct_mv_pred = X264_DIRECT_PRED_AUTO; 
+        param->analyse.inter |= X264_ANALYSE_PSUB8x8; 
+        param->analyse.i_trellis = 2; 
+        param->i_bframe = 8; 
+        param->rc.i_lookahead = 60; 
+    } 
+    else if( !strcasecmp( preset, "placebo" ) ) 
+    { 
+        param->analyse.i_me_method = X264_ME_TESA; 
+        param->analyse.i_subpel_refine = 11; 
+        param->analyse.i_me_range = 24; 
+        param->i_frame_reference = 16; 
+        param->i_bframe_adaptive = X264_B_ADAPT_TRELLIS; 
+        param->analyse.i_direct_mv_pred = X264_DIRECT_PRED_AUTO; 
+        param->analyse.inter |= X264_ANALYSE_PSUB8x8; 
+        param->analyse.b_fast_pskip = 0; 
+        param->analyse.i_trellis = 2; 
+        param->i_bframe = 16; 
+        param->rc.i_lookahead = 60; 
+    } 
+    else 
+    { 
+        x264_log( NULL, X264_LOG_ERROR, "invalid preset '%s'\n", preset ); 
+        return -1; 
+    } 
+    return 0; 
+} 
+这里定义了几种模式供用户选 择，经过测试，这些模式是会影响到编码的延迟时间的，越快的模式，其延迟越小，
+对于"ultralfast"模式，我们发现延迟帧减少了许多，同时发现越 快的模式相对于其他模式会有些花屏，
+但此时我发现所有模式都没有使得延迟为0的情况
+（此时我是直接修改源代码来固定设置为特定模式的，后面我们会讲到如何 通过ffmpeg中的API来设置），
+于是我将希望寄托于下面的x264_param_apply_tune，我感觉这可能是我最后的救命稻草了！
+下面我 们来看一下这个函数的源代码：
+static int x264_param_apply_tune( x264_param_t *param, const char *tune ) 
+{ 
+    char *tmp = x264_malloc( strlen( tune ) + 1 ); 
+    if( !tmp ) 
+        return -1; 
+    tmp = strcpy( tmp, tune ); 
+    char *s = strtok( tmp, ",./-+" ); 
+    int psy_tuning_used = 0; 
+    while( s ) 
+    { 
+        if( !strncasecmp( s, "film", 4 ) ) 
+        { 
+            if( psy_tuning_used++ ) goto psy_failure; 
+            param->i_deblocking_filter_alphac0 = -1; 
+            param->i_deblocking_filter_beta = -1; 
+            param->analyse.f_psy_trellis = 0.15; 
+        } 
+        else if( !strncasecmp( s, "animation", 9 ) ) 
+        { 
+            if( psy_tuning_used++ ) goto psy_failure; 
+            param->i_frame_reference = param->i_frame_reference > 1 ? param->i_frame_reference*2 : 1; 
+            param->i_deblocking_filter_alphac0 = 1; 
+            param->i_deblocking_filter_beta = 1; 
+            param->analyse.f_psy_rd = 0.4; 
+            param->rc.f_aq_strength = 0.6; 
+            param->i_bframe += 2; 
+        } 
+        else if( !strncasecmp( s, "grain", 5 ) ) 
+        { 
+            if( psy_tuning_used++ ) goto psy_failure; 
+            param->i_deblocking_filter_alphac0 = -2; 
+            param->i_deblocking_filter_beta = -2; 
+            param->analyse.f_psy_trellis = 0.25; 
+            param->analyse.b_dct_decimate = 0; 
+            param->rc.f_pb_factor = 1.1; 
+            param->rc.f_ip_factor = 1.1; 
+            param->rc.f_aq_strength = 0.5; 
+            param->analyse.i_luma_deadzone[0] = 6; 
+            param->analyse.i_luma_deadzone[1] = 6; 
+            param->rc.f_qcompress = 0.8; 
+        } 
+        else if( !strncasecmp( s, "stillimage", 5 ) ) 
+        { 
+            if( psy_tuning_used++ ) goto psy_failure; 
+            param->i_deblocking_filter_alphac0 = -3; 
+            param->i_deblocking_filter_beta = -3; 
+            param->analyse.f_psy_rd = 2.0; 
+            param->analyse.f_psy_trellis = 0.7; 
+            param->rc.f_aq_strength = 1.2; 
+        } 
+        else if( !strncasecmp( s, "psnr", 4 ) ) 
+        { 
+            if( psy_tuning_used++ ) goto psy_failure; 
+            param->rc.i_aq_mode = X264_AQ_NONE; 
+            param->analyse.b_psy = 0; 
+        } 
+        else if( !strncasecmp( s, "ssim", 4 ) ) 
+        { 
+            if( psy_tuning_used++ ) goto psy_failure; 
+            param->rc.i_aq_mode = X264_AQ_AUTOVARIANCE; 
+            param->analyse.b_psy = 0; 
+        } 
+        else if( !strncasecmp( s, "fastdecode", 10 ) ) 
+        { 
+            param->b_deblocking_filter = 0; 
+            param->b_cabac = 0; 
+            param->analyse.b_weighted_bipred = 0; 
+            param->analyse.i_weighted_pred = X264_WEIGHTP_NONE; 
+        } 
+        <span style="color:#ff6666;">else if( !strncasecmp( s, "zerolatency", 11 ) ) 
+        { 
+            param->rc.i_lookahead = 0; 
+            param->i_sync_lookahead = 0; 
+            param->i_bframe = 0; 
+            param->b_sliced_threads = 1; 
+            param->b_vfr_input = 0; 
+            param->rc.b_mb_tree = 0; 
+        }</span> 
+        else if( !strncasecmp( s, "touhou", 6 ) ) 
+        { 
+            if( psy_tuning_used++ ) goto psy_failure; 
+            param->i_frame_reference = param->i_frame_reference > 1 ? param->i_frame_reference*2 : 1; 
+            param->i_deblocking_filter_alphac0 = -1; 
+            param->i_deblocking_filter_beta = -1; 
+            param->analyse.f_psy_trellis = 0.2; 
+            param->rc.f_aq_strength = 1.3; 
+            if( param->analyse.inter & X264_ANALYSE_PSUB16x16 ) 
+                param->analyse.inter |= X264_ANALYSE_PSUB8x8; 
+        } 
+        else 
+        { 
+            x264_log( NULL, X264_LOG_ERROR, "invalid tune '%s'\n", s ); 
+            x264_free( tmp ); 
+            return -1; 
+        } 
+        if( 0 ) 
+        { 
+    psy_failure: 
+            x264_log( NULL, X264_LOG_WARNING, "only 1 psy tuning can be used: ignoring tune %s\n", s ); 
+        } 
+        s = strtok( NULL, ",./-+" ); 
+    } 
+    x264_free( tmp ); 
+    return 0; 
+} 
+我们在代码中也看到了有几种模 式供选择，每种模式都是对一些参数的具体设置，
+当然这些参数的意义我也不是很清楚，有待后面继续的研究，但我却惊喜地发现了一个 “zerolatency”模式，
+这不就是我要找的实时编码模式吗，至少从字面上来讲是！
+于是修改源代码写死为“zerolatency”模式，编译、运 行，我的天哪，终于找到了！
+    另外，我了解到，其实在工程编译出的可执行文件运行时也是可以指定这些运行参数的，
+这更加证实了我的想法。于是我得出了一个结论：
+x264_param_apply_preset和x264_param_apply_tune的参数决定了编码器的全部运作方式
+（当然包括是否编码延迟，以及延迟多长）！
+
+当前位置: 主页>音视频技术>音视频编解码>
+从ffmpeg源代码分析如何解决ffmpeg编码的延迟问题(6)
+落鹤生 发布于 2013-10-15 18:57 点击:1236次 	
+如何不修改ffmpeg或者x264工程源代码来达到实时编码 知道了影响编码延迟的原因后，我们又要上溯到ffmpeg中的X264_init代码中去了， 看看该函数是如何指定x264_param_default_preset函数的参数的，为了便于讲解，我
+TAG: FFMPEG  av_op_set  编码参数  
+
+  
+如何不修改ffmpeg或者x264工程源代码来达到实时编码
+    知道了影响编码延迟的原因后，我们又要上溯到ffmpeg中的X264_init代码中去了，
+看看该函数是如何指定x264_param_default_preset函数的参数的，为了便于讲解，我们再次列出部分代码：
+static av_cold int X264_init(AVCodecContext *avctx) 
+{ 
+    X264Context *x4 = avctx->priv_data; 
+    int sw,sh; 
+ 
+    x264_param_default(&x4->params); 
+ 
+    x4->params.b_deblocking_filter         = avctx->flags & CODEC_FLAG_LOOP_FILTER; 
+ 
+    x4->params.rc.f_ip_factor             = 1 / fabs(avctx->i_quant_factor); 
+    x4->params.rc.f_pb_factor             = avctx->b_quant_factor; 
+    x4->params.analyse.i_chroma_qp_offset = avctx->chromaoffset; 
+    if (x4->preset || x4->tune) 
+        <span style="color:#ff6666;">///////////////////////////////////////////////////////////////////////////////////////// 
+        // 主要看看这个函数，在这里面会设置很多关键的参数，这个函数式X264提供的，接下来我们要到X264中查看其源代码 
+        if (x264_param_default_preset(&x4->params, x4->preset, x4->tune) < 0) { 
+            int i; 
+            av_log(avctx, AV_LOG_ERROR, "Error setting preset/tune %s/%s.\n", x4->preset, x4->tune); 
+            av_log(avctx, AV_LOG_INFO, "Possible presets:"); 
+            for (i = 0; x264_preset_names[i]; i++) 
+                av_log(avctx, AV_LOG_INFO, " %s", x264_preset_names[i]); 
+            av_log(avctx, AV_LOG_INFO, "\n"); 
+            av_log(avctx, AV_LOG_INFO, "Possible tunes:"); 
+            for (i = 0; x264_tune_names[i]; i++) 
+                av_log(avctx, AV_LOG_INFO, " %s", x264_tune_names[i]); 
+            av_log(avctx, AV_LOG_INFO, "\n"); 
+            return AVERROR(EINVAL); 
+        } 
+        ////////////////////////////////////////////////////////////////////////////////////////</span> 
+    ...... 
+    ...... 
+} 
+这里调用 x264_param_default_preset(&x4->params, x4->preset, x4->tune) ，
+而x4变量的类型是X264Context ，这个结构体中的参数是最终要传给X264来设置编码器参数的，
+我们还可以从X264Context *x4 = avctx->priv_data;中看到，
+x4变量其实是有AVCodecContext中的priv_data成员指定的，
+在 AVCodecContext中priv_data是void*类型，而AVCodecContext正是我们传进来的，
+也就是说，我们现在终于可以想办 法控制这些参数了----这要把这些参数指定给priv_data成员即可了。
+    现在我们还是先看看X264Context 中那些成员指定了控制得到实时编码的的参数：
+typedef struct X264Context { 
+    AVClass        *class; 
+    x264_param_t    params; 
+    x264_t         *enc; 
+    x264_picture_t  pic; 
+    uint8_t        *sei; 
+    int             sei_size; 
+    AVFrame         out_pic; 
+    char *preset; 
+    char *tune; 
+    char *profile; 
+    char *level; 
+    int fastfirstpass; 
+    char *wpredp; 
+    char *x264opts; 
+    float crf; 
+    float crf_max; 
+    int cqp; 
+    int aq_mode; 
+    float aq_strength; 
+    char *psy_rd; 
+    int psy; 
+    int rc_lookahead; 
+    int weightp; 
+    int weightb; 
+    int ssim; 
+    int intra_refresh; 
+    int b_bias; 
+    int b_pyramid; 
+    int mixed_refs; 
+    int dct8x8; 
+    int fast_pskip; 
+    int aud; 
+    int mbtree; 
+    char *deblock; 
+    float cplxblur; 
+    char *partitions; 
+    int direct_pred; 
+    int slice_max_size; 
+    char *stats; 
+} X264Context; 
+出于本能，我第一时间发现了两个我最关心的两个参数：preset和tune，这正是(x264_param_default_preset要用到的两个参数。
+至此，我认为已经想到了解决编码延迟的解决方案了（离完美还差那么一步），于是我立马在将测试代码中做出如下的修改：
+......   
+c = avcodec_alloc_context3(codec); 
+ 
+ /* put sample parameters */ 
+ c->bit_rate = 400000; 
+ /* resolution must be a multiple of two */ 
+ c->width = 800/*352*/; 
+ c->height = 500/*288*/; 
+ /* frames per second */ 
+ c->time_base.den = 1; 
+>time_base.num = 25; 
+ c->gop_size = 10; /* emit one intra frame every ten frames */ 
+ c->max_b_frames=1; 
+ c->pix_fmt = PIX_FMT_YUV420P; 
+ 
+ <span style="color:#ff6666;">// 新增语句，设置为编码延迟 
+ if (c->priv_data) { 
+     ((X264Context*)(c->priv_data))->preset = "superfast"; 
+     ((X264Context*)(c->priv_data))->tune = "zerolatency"; 
+ }</span> 
+ ...... 
